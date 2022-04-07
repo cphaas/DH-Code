@@ -97,6 +97,7 @@ def tryWord(word, sourcelang, translang):
     if word.lower() == transword.lower():
         print("Could not find a translation of " + word + " in " + langDict[translang])
         print("Translation unsuccessful")
+        return False
     print(word + " in " + langDict[translang] + " is " + transword)
     print("Attempting to translate " + transword + " back to " + langDict[sourcelang] + " " + word)
     retransword = translate(transword, sourcelang)
@@ -117,16 +118,28 @@ def checkForTranslation(sourceWord, transWord, sourceLang, transLang):
     return True
 
 
-# Creates a list of dictionaries from a .csv file. Each dictionary corresponds to a word with any associated data.
+# Creates a list of dictionaries from a .csv file. The key values for the dictionary are determined by the first
+# row of the .csv file.
 
-# def wordListFromCsv(filepath):
-
+def wordListFromCsv(fileName):
+    wordList = []
+    with open(fileName) as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            wordList.append(row)
+    return wordList
 
 # Press the green button in the gutter to run the script.
 
 if __name__ == '__main__':
     # print(translate(translate("go", "DE").text, "EN-US"))
-    tryWord("go", "EN-US", "DE")
+    # tryWord("go", "EN-US", "DE")
     # tryWord("Kummerspeck", "DE", "EN-US")
     # tryWord("treiben", "DE", "EN-US")
     # print(type(translate("go", "DE")))
+    testLangList = ["DE", "ZH", "SV", "CS"]
+    testWordList = wordListFromCsv('jakarta list.csv')
+    for word in testWordList:
+        for lang in testLangList:
+            tryWord(word['wordOrig'], word['langCode'], lang)
+            print("")
