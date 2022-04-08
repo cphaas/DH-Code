@@ -112,11 +112,33 @@ def tryWord(word, sourcelang, translang):
 
 # Returns True if translation has occured (i.e. the text has changed). Returns False otherwise
 
-def checkForTranslation(sourceWord, transWord, sourceLang, transLang):
+def checkForTranslation(sourceWord, transWord):
     if sourceWord.lower() == transWord.lower():
         return False
     return True
 
+# Takes string "word" and source language code "sourceLang". Returns word, stripped of any infinitival prepositions it may
+# have ("att" for Swedish, "at" for Danish, "to" for English).
+
+def stripInfPrep(word, sourceLang):
+    if sourceLang == "SV":
+        if word[0:4] == "att ":
+            return word[4:]
+    if sourceLang == "DA":
+        if word[0:3] == "at ":
+            return word[3:]
+    if sourceLang == "EN-US" or sourceLang == "EN-UK":
+        if word[0:3] == "to ":
+            return word[3:]
+    return word
+
+# Returns True if either word1 or word2 is a plural form of the other. Returns False otherwise.
+# Note that this works only for English, and does not work reliably for irregular plurals
+
+def checkForPluralForm(word1, word2):
+    if word1 + "s" == word2 or word1 == word2 + "s":
+        return True
+    return False
 
 # Creates a list of dictionaries from a .csv file. The key values for the dictionary are determined by the first
 # row of the .csv file.
@@ -137,9 +159,15 @@ if __name__ == '__main__':
     # tryWord("Kummerspeck", "DE", "EN-US")
     # tryWord("treiben", "DE", "EN-US")
     # print(type(translate("go", "DE")))
-    testLangList = ["DE", "ZH", "SV", "CS"]
-    testWordList = wordListFromCsv('jakarta list.csv')
-    for word in testWordList:
-        for lang in testLangList:
-            tryWord(word['wordOrig'], word['langCode'], lang)
-            print("")
+    # testLangList = ["DE", "ZH", "SV", "CS"]
+    # testWordList = wordListFromCsv('jakarta list.csv')
+    # for word in testWordList:
+    #     for lang in testLangList:
+    #         tryWord(word['wordOrig'], word['langCode'], lang)
+    #         print("")
+    print(checkForPluralForm("dog", "dogs"))
+    print(checkForPluralForm("dogs", "dog"))
+    print(checkForPluralForm("dog", "dog"))
+    print(stripInfPrep("att segja", "SV"))
+    print(stripInfPrep("to eat", "EN-US"))
+    print(stripInfPrep("tomato", "EN-US"))
