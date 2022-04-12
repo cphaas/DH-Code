@@ -69,6 +69,8 @@ keyDict = {
     "Chinese": "ZH"
 }
 
+outputCsvHeadings = ["sourceWord", "transWord", "endWord", "sourceLang", "transLang", "result"]
+
 # Translates string "text" into language "targetlang" and returns the result as a string. For list of language keys see
 # dictionary keydict above
 
@@ -84,37 +86,45 @@ def isEnglish(word):
         return False
     return True
 
-# Translates word "word" into language "translang" and then back into language "sourcelang. Returns True if the words match, returns False if not
+# Translates word "word" into language "transLang" and then back into language "sourceLang. Returns a dictionary containing
+# the sourceWord, the value the word was translated to, whatever the word was translated back
+# to, the starting language, the translation language, and the result (True or False). These are keyed (respectively) to
+# "sourceWord", "transWord", "endWord", "sourceLang", "transLang", "result"
 
-def tryWord(word, sourcelang, translang):
-    print("Attempting to translate " + word + " from " + langDict[sourcelang] + " into " + langDict[translang])
-    transword = translate(word, translang)
-    if sourcelang == "EN":
-        if word.lower()==transword.lower() and not isEnglish(word):
-            print("Could not find a translation of " + word + " in " + langDict[translang])
-            print("Translation unsuccessful")
+def tryWord(sourceWord, sourceLang, transLang):
+    resultDict = {}
+    resultDict["sourceLang"] = sourceLang
+    resultDict["transLang"] = transLang
+    resultDict["sourceWord"] = sourceWord
+    sourceWord = stripInfPrep(sourceWord, sourceLang)   # Strip any known infinitive prefixes from verbs
+    transWord = translate(sourceWord, transLang)  # Translate the word into the transLang
+    resultDict["transWord"] = transWord
+    if not checkForTransOccurence(sourceWord, transWord, transLang):   # Checks to make sure a translation has actually occurred
+        resultDict["result"] = False                                   # (only effectively catches loan words when translating into English)
+        resultDict["endWord"] = " "
+    endWord = translate(transWord, sourceLang) # Translate the word back into sourceLange
+    resultDict["endWord"] = endWord
+    resultDict["result"] = checkTrans(sourceWord, endWord)     # Check the accuracy of the translation
+    return resultDict
+
+# Returns True if translation has occured (i.e. the text has changed). Returns False otherwise.
+
+def checkForTransOccurence(sourceWord, transWord, transLang):
+    if transLang == "EN-US" or transLang == "EN-UK":
+        if sourceWord.lower() == transWord.lower() and transWord.lower() not in english_words.english_words_lower_set:
             return False
-    if word.lower() == transword.lower():
-        print("Could not find a translation of " + word + " in " + langDict[translang])
-        print("Translation unsuccessful")
-        return False
-    print(word + " in " + langDict[translang] + " is " + transword)
-    print("Attempting to translate " + transword + " back to " + langDict[sourcelang] + " " + word)
-    retransword = translate(transword, sourcelang)
-    if word.lower() == retransword.lower():
-        print(transword + " translated back to " + word)
-        print("Translation successful")
-        return True
-    else:
-        print(transword + " translated back to " + retransword + ", not " + word)
-        print("Translation unsuccessful")
-        return False
-
-# Returns True if translation has occured (i.e. the text has changed). Returns False otherwise
-
-def checkForTranslation(sourceWord, transWord):
     if sourceWord.lower() == transWord.lower():
         return False
+    return True
+
+# Checks whether a translated word matches the original word, or is a plural form of the original word
+
+def checkTrans(sourceWord, endWord):
+    sourceWord = sourceWord.lower()
+    endWord = endWord.lower()
+    if sourceWord != endWord:
+        if not checkForPluralForm(sourceWord, endWord):
+            return False
     return True
 
 # Takes string "word" and source language code "sourceLang". Returns word, stripped of any infinitival prepositions it may
@@ -151,23 +161,39 @@ def wordListFromCsv(fileName):
             wordList.append(row)
     return wordList
 
+# Given a fileName and a list of strings, creates a csv file with headings set to the values listed in the list
+
+def createCsvFile(fileName, headingList):
+    with open(fileName, "w", newline="") as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(headingList)
+
+# Given a .csv filename, the original word input, the value the word was translated to, whatever the word was translated back
+# to, the starting language, the translation language, and the result (True or False), inputs the result into the listed
+# csv file
+
+def addTransResultToCsv(fileName, tryData):
+    with open(fileName, "a", newline="") as csvFile:
+        writer = csv.writer(csvFile)
+        inputData = [tryData["sourceWord"], tryData["transWord"], tryData["endWord"], tryData["sourceLang"],
+                     tryData["transLang"], tryData["result"]]
+        writer.writerow(inputData)
+
+#
+
+def testWordList(inputFileName, outputFileName, langList):
+    wordList = wordListFromCsv(inputFileName)
+    outputFile = createCsvFile(outputFileName, outputCsvHeadings)
+    for word in wordList:
+        for lang in langList:
+            tryData = tryWord(word["wordOrig"], word["langCode"], lang)
+            addTransResultToCsv(outputFileName, tryData)
+
+
+
 # Press the green button in the gutter to run the script.
 
 if __name__ == '__main__':
-    # print(translate(translate("go", "DE").text, "EN-US"))
-    # tryWord("go", "EN-US", "DE")
-    # tryWord("Kummerspeck", "DE", "EN-US")
-    # tryWord("treiben", "DE", "EN-US")
-    # print(type(translate("go", "DE")))
-    # testLangList = ["DE", "ZH", "SV", "CS"]
-    # testWordList = wordListFromCsv('jakarta list.csv')
-    # for word in testWordList:
-    #     for lang in testLangList:
-    #         tryWord(word['wordOrig'], word['langCode'], lang)
-    #         print("")
-    print(checkForPluralForm("dog", "dogs"))
-    print(checkForPluralForm("dogs", "dog"))
-    print(checkForPluralForm("dog", "dog"))
-    print(stripInfPrep("att segja", "SV"))
-    print(stripInfPrep("to eat", "EN-US"))
-    print(stripInfPrep("tomato", "EN-US"))
+
+    testWordList("jakarta list.csv", "test list", ["SV", "DE"])
+
