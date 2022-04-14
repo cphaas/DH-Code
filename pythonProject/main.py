@@ -183,7 +183,7 @@ def addTransResultToCsv(fileName, tryData):
 
 def testWordList(inputFileName, outputFileName, langList):
     wordList = wordListFromCsv(inputFileName)
-    outputFile = createCsvFile(outputFileName, outputCsvHeadings)
+    createCsvFile(outputFileName, outputCsvHeadings)
     for word in wordList:
         for lang in langList:
             tryData = tryWord(word["wordOrig"], word["langCode"], lang)
@@ -195,5 +195,5 @@ def testWordList(inputFileName, outputFileName, langList):
 
 if __name__ == '__main__':
 
-    testWordList("jakarta list.csv", "test list", ["SV", "DE"])
+    testWordList("jakarta list.csv", "test list.csv", ["SV", "DE"])
 
