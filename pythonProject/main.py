@@ -2,6 +2,7 @@
 import deepl
 import csv
 import english_words
+from nltk.corpus import stopwords
 
 # Insert your own deepl API key here as a string
 APIkey = "166c5f45-43da-3ef1-a710-de69fadc7a2d:fx"
@@ -10,6 +11,8 @@ APIkey = "166c5f45-43da-3ef1-a710-de69fadc7a2d:fx"
 translator = deepl.Translator(APIkey)
 
 # Dictionary with DeepL language codes as string keys and english language names as values
+
+
 
 langDict = {
     "BG": "Bulgarian",
@@ -30,7 +33,7 @@ langDict = {
     "LV": "Latvian",
     "NL": "Dutch",
     "PL": "Polish",
-    "PT": "Portuguese",
+    "PT-BR": "Portuguese",
     "RO": "Romanian",
     "RU": "Russian",
     "SK": "Slovak",
@@ -60,7 +63,7 @@ keyDict = {
     "Latvian": "LV",
     "Dutch": "NL",
     "Polish": "PL",
-    "Portuguese": "PT",
+    "Portuguese": "PT-BR",
     "Romanian": "RO",
     "Russian": "RU",
     "Slovak": "SK",
@@ -68,8 +71,12 @@ keyDict = {
     "Swedish": "SV",
     "Chinese": "ZH"
 }
+allLangList = ["BG", "CS", "DA", "DE", "EL", "EN-US", "ES", "ET", "FI", "FR", "HU", "IT", "JA", "LT", "LV",
+               "NL", "PL", "PT-BR", "RO", "RU", "SK", "SL", "SV", "ZH"]
 
 outputCsvHeadings = ["sourceWord", "transWord", "endWord", "sourceLang", "transLang", "result"]
+
+englishStopwords = set(stopwords.words('english'))
 
 # Translates string "text" into language "targetlang" and returns the result as a string. For list of language keys see
 # dictionary keydict above
@@ -92,6 +99,10 @@ def isEnglish(word):
 # "sourceWord", "transWord", "endWord", "sourceLang", "transLang", "result"
 
 def tryWord(sourceWord, sourceLang, transLang):
+    if sourceLang == transLang:
+        return None
+    if sourceLang == "EN-US" and sourceWord in englishStopwords:
+        return None
     resultDict = {}
     resultDict["sourceLang"] = sourceLang
     resultDict["transLang"] = transLang
@@ -155,7 +166,7 @@ def checkForPluralForm(word1, word2):
 
 def wordListFromCsv(fileName):
     wordList = []
-    with open(fileName) as file:
+    with open(fileName, "r", newline="", encoding='utf-8') as file:
         reader = csv.DictReader(file)
         for row in reader:
             wordList.append(row)
@@ -173,10 +184,13 @@ def createCsvFile(fileName, headingList):
 # csv file
 
 def addTransResultToCsv(fileName, tryData):
-    with open(fileName, "a", newline="") as csvFile:
+    with open(fileName, "a", newline="", encoding='utf-8') as csvFile:
         writer = csv.writer(csvFile)
         inputData = [tryData["sourceWord"], tryData["transWord"], tryData["endWord"], tryData["sourceLang"],
                      tryData["transLang"], tryData["result"]]
+        print("Source word: " + tryData["sourceWord"])
+        print("Trans word: " + tryData["transWord"])
+        print("End word: " + tryData["endWord"])
         writer.writerow(inputData)
 
 #
@@ -187,13 +201,11 @@ def testWordList(inputFileName, outputFileName, langList):
     for word in wordList:
         for lang in langList:
             tryData = tryWord(word["wordOrig"], word["langCode"], lang)
-            addTransResultToCsv(outputFileName, tryData)
-
-
+            if tryData != None:
+                addTransResultToCsv(outputFileName, tryData)
 
 # Press the green button in the gutter to run the script.
 
 if __name__ == '__main__':
-
-    testWordList("jakarta list.csv", "test list.csv", ["SV", "DE"])
-
+    # testWordList("jakarta-swadesh list.csv", "", allLangList)
+    testWordList("untranslatable-words.csv", "untranslatable-words_list_all_langs.csv", allLangList)
