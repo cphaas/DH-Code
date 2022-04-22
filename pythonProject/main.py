@@ -20,7 +20,7 @@ langDict = {
     "DA": "Danish",
     "DE": "German",
     "EL": "Greek",
-    "EN-UK": "British English",
+    "EN-GB": "British English",
     "EN-US": "American English",
     "ES": "Spanish",
     "ET": "Estonian",
@@ -50,7 +50,7 @@ keyDict = {
     "Danish": "DA",
     "German": "DE",
     "Greek": "EL",
-    "British English": "EN-UK",
+    "British English": "EN-GB",
     "American English": "EN-US",
     "Spanish": "ES",
     "Estonian": "ET",
@@ -81,9 +81,13 @@ englishStopwords = set(stopwords.words('english'))
 # Translates string "text" into language "targetlang" and returns the result as a string. For list of language keys see
 # dictionary keydict above
 
-def translate(text, targetlang):
+def translate(text, targetlang, sourceLang):
     text = str(text)
-    result = translator.translate_text(text=text, target_lang=targetlang)
+    if sourceLang == "EN-US" or sourceLang == "EN-GB":
+        sourceLang = "EN"
+    if sourceLang == "PT-BR":
+        sourceLang = "PT"
+    result = translator.translate_text(text=text, source_lang=sourceLang, target_lang=targetlang)
     return result.__str__()
 
 # Returns True if word "word" is in the set of English words and returns False otherwise
@@ -108,20 +112,21 @@ def tryWord(sourceWord, sourceLang, transLang):
     resultDict["transLang"] = transLang
     resultDict["sourceWord"] = sourceWord
     sourceWord = stripInfPrep(sourceWord, sourceLang)   # Strip any known infinitive prefixes from verbs
-    transWord = translate(sourceWord, transLang)  # Translate the word into the transLang
+    transWord = translate(sourceWord, transLang, sourceLang)  # Translate the word into the transLang
     resultDict["transWord"] = transWord
     if not checkForTransOccurence(sourceWord, transWord, transLang):   # Checks to make sure a translation has actually occurred
         resultDict["result"] = False                                   # (only effectively catches loan words when translating into English)
         resultDict["endWord"] = " "
-    endWord = translate(transWord, sourceLang) # Translate the word back into sourceLange
+        return resultDict
+    endWord = translate(transWord, sourceLang, transLang) # Translate the word back into sourceLange
     resultDict["endWord"] = endWord
-    resultDict["result"] = checkTrans(sourceWord, endWord)     # Check the accuracy of the translation
+    resultDict["result"] = checkTrans(sourceWord, endWord, sourceLang)     # Check the accuracy of the translation
     return resultDict
 
 # Returns True if translation has occured (i.e. the text has changed). Returns False otherwise.
 
 def checkForTransOccurence(sourceWord, transWord, transLang):
-    if transLang == "EN-US" or transLang == "EN-UK":
+    if transLang == "EN-US" or transLang == "EN-GB":
         if sourceWord.lower() == transWord.lower() and transWord.lower() not in english_words.english_words_lower_set:
             return False
     if sourceWord.lower() == transWord.lower():
@@ -130,12 +135,13 @@ def checkForTransOccurence(sourceWord, transWord, transLang):
 
 # Checks whether a translated word matches the original word, or is a plural form of the original word
 
-def checkTrans(sourceWord, endWord):
+def checkTrans(sourceWord, endWord, sourceLang):
     sourceWord = sourceWord.lower()
     endWord = endWord.lower()
     if sourceWord != endWord:
-        if not checkForPluralForm(sourceWord, endWord):
-            return False
+        if not checkForInfinitivizedForm(sourceWord, endWord, sourceLang):
+            if not checkForPluralForm(sourceWord, endWord):
+                return False
     return True
 
 # Takes string "word" and source language code "sourceLang". Returns word, stripped of any infinitival prepositions it may
@@ -148,10 +154,18 @@ def stripInfPrep(word, sourceLang):
     if sourceLang == "DA":
         if word[0:3] == "at ":
             return word[3:]
-    if sourceLang == "EN-US" or sourceLang == "EN-UK":
+    if sourceLang == "EN-US" or sourceLang == "EN-GB":
         if word[0:3] == "to ":
             return word[3:]
     return word
+
+# Returns True if either word1 or word2 is an infinitivized form of the other. Returns false otherwise.
+# Only functions for Danish, Swedish and English
+
+def checkForInfinitivizedForm(word1, word2, lang):
+    if stripInfPrep(word1, lang) == word2 or stripInfPrep(word2, lang) == word1:
+        return True
+    return False
 
 # Returns True if either word1 or word2 is a plural form of the other. Returns False otherwise.
 # Note that this works only for English, and does not work reliably for irregular plurals
@@ -207,5 +221,5 @@ def testWordList(inputFileName, outputFileName, langList):
 # Press the green button in the gutter to run the script.
 
 if __name__ == '__main__':
-    # testWordList("jakarta-swadesh list.csv", "", allLangList)
-    testWordList("untranslatable-words.csv", "untranslatable-words_list_all_langs.csv", allLangList)
+    testWordList("jakarta-swadesh list.csv", "jakarta-swadesh_list_all_langs_try2.csv", allLangList)
+    testWordList("untranslatable-words.csv", "untranslatable-words_list_all_langs_try2.csv", allLangList)
